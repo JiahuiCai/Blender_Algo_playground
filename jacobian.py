@@ -67,7 +67,7 @@ m[2].append (0)
 
 m.append([])
 m[3] = [0,0,0,1]
-
+LEN = sym.Symbol("LEN")
 #quaternion of the current bone
 QT = sym.Matrix(m)
 
@@ -80,14 +80,61 @@ transform = (QT.T * arm_mat).T * T
 order = sym.Matrix([w,x,y,z])
 jacobian = transform.jacobian(order)
 
-#sym.pretty_print(jacobian)
+#sym.pretty_print(jacobian.subs([(w**2 + x**2 + y**2 + z**2, LEN)]))
+
+sym.pretty_print(round_expr(jacobian.subs([
+    (w, 0.999),
+    (x, -0.044),
+    (y, 0.018),
+    (z, 0.014),
+
+    (xx,1),
+    (xy,0),
+    (xz,0),
+
+    (yx,0),
+    (yy,0),
+    (yz,1),
+    
+    (zx,0),
+    (zy,-1),
+    (zz,0),
+
+    (hx, 0),
+    (hy, 0),
+    (hz, 0),
+
+    (tx, 0),
+    (ty, 1),
+    (tz, 0), 
+]),5));
+
 
 predicted = sym.Matrix([0,0,1,1]) + jacobian * sym.Matrix([wt-w, xt-x, yt-y, zt-z])
 
 
 energy = ds - jacobian * sym.Matrix([wt-w, xt-x, yt-y, zt-z])
-energy = energy.dot(energy)
+#energy = energy.dot(energy)
 
+
+ja00, ja01, ja02,ja03, ja10, ja11, ja12, ja13, ja20, ja21, ja22, ja23, ja30, ja31,ja32,ja33 = sym.symbols(
+    'ja00 ja01 ja02 ja03 ja10 ja11 ja12 ja13 ja20 ja21 ja22 ja23 ja30 ja31 ja32 ja33'
+)
+
+jaco_proxy = sym.Matrix([
+    [ja00, ja01, ja02, ja03],
+    [ja10, ja11, ja12, ja13],
+    [ja20, ja21, ja22, ja23],
+    [0, 0, 0, 0]
+])
+
+LEN = sym.Symbol("LEN")
+
+energy_proxy = ds - jaco_proxy * sym.Matrix([wt-w, xt-x, yt-y, zt-z])
+#energy_proxy = energy_proxy.dot(energy_proxy)
+
+sym.pretty_print(energy.subs([(w**2 + x**2 + y**2 + z**2, LEN)]))
+#sym.pretty_print(energy_proxy)
 
 
 
@@ -167,7 +214,7 @@ sym.pretty_print(predicted.subs([
     (ty, 1),
     (tz, 0), 
 ]))
-'''
+
 
 sym.pretty_print(round_expr(energy.subs([
     (w, 0.999),
@@ -241,10 +288,14 @@ objective = round_expr(energy.subs([
     (tz, 0), 
 ]),3)
 
+sym.pretty_print(objective)
+
+
 f = sym.lambdify([wt,xt,yt,zt], objective, 'numpy')
 
 def obj(x):
     return f(x[0],x[1],x[2],x[3])
 
-print (optimize.minimize(obj, [0.999,-0.044,0.018,0.014]))
+#print (optimize.minimize(obj, [0.999,-0.044,0.018,0.014]))
 
+'''
